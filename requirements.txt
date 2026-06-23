@@ -1,5 +1,8 @@
 pandas
 numpy
+pyodbc
 scikit-learn
+pyproj
 matplotlib
+shapely
 seaborn

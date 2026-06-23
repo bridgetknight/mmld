@@ -3,6 +3,7 @@ import pandas as pd
 import pyodbc
 from pyproj import Transformer
 from shapely import wkb
+import sys
 
 def build_conn_str(server, database):
     return (
@@ -60,17 +61,30 @@ def _set_database_name(name):
     print("Successfully changed DATABASE_NAME.")
 
 # IN PROGRESS FUNCTIONS
-def ensure_table(conn: pyodbc.Connection, table: str = TABLE_NAME):
+def ensure_table(conn: pyodbc.Connection, table: str):
     ddl = f"""
 IF OBJECT_ID('dbo.{table}', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.{table} (
         Id INT IDENTITY(1,1) PRIMARY KEY,
         MeterID INT NOT NULL,
-        Timestamp DATETIME2(0) NOT NULL,
+        [Timestamp] DATETIME2(0) NOT NULL,
         HourlyAvgPower FLOAT NOT NULL
     );
-    CREATE UNIQUE INDEX ux_{table}_meter_time ON dbo.{table}(MeterID, Timestamp) WITH (IGNORE_DUP_KEY = ON);
+    CREATE UNIQUE INDEX ux_{table}_meter_time ON dbo.{table}(MeterID, [Timestamp]) WITH (IGNORE_DUP_KEY = ON);
+END
+ELSE
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM sys.indexes i
+        JOIN sys.objects o ON i.object_id = o.object_id
+        WHERE o.object_id = OBJECT_ID('dbo.{table}')
+          AND i.name = 'ux_{table}_meter_time'
+    )
+    BEGIN
+        CREATE UNIQUE INDEX ux_{table}_meter_time ON dbo.{table}(MeterID, [Timestamp]) WITH (IGNORE_DUP_KEY = ON);
+    END
 END
 """
     cur = conn.cursor()
@@ -139,12 +153,19 @@ def process_file(
     return result
 
 # Process a folder of CSV files from Nexgrid
-def process_folder(directory):
+def process_folder(
+    table: str,
+    directory: str,
+    conn: pyodbc.Connection,
+    coords_df: pd.DataFrame | None = None,
+    database: str | None = None,
+    chunk_size: int = 10000,
+):
     for file in os.listdir(directory):
         path = os.path.join(directory, file)
         if path.lower().endswith(".csv"):
-            f = process_file(path, conn, coords_df=coords_df, database=DATABASE_NAME) # Returns a cleaned DF from a CSV
-            insert_meter_rows(f)
+            df = process_file(path, conn, coords_df=coords_df, database=database) # Returns a cleaned DF from a CSV using SOURCE_DB
+            insert_meter_rows(conn, df, table=table)
 
 def clean_nexgrid_data(df):
     # Get percentage null of each column
@@ -153,7 +174,7 @@ def clean_nexgrid_data(df):
         missing_value_pct = pd.DataFrame({"column_name": df.columns,
                                         "percent_missing": percent_missing})
         missing_value_pct.sort_values('percent_missing', inplace=True)
-        display(missing_value_pct)
+        print(missing_value_pct)
 
         removed_cols = []
         print("Removing unused columns...")
@@ -195,9 +216,9 @@ if __name__ == "__main__":
     SERVER = "MMLDAPP03"
     SOURCE_DB = "MMLDGIS"           # where shapes/meternxt live
     TARGET_DB = "mPowerKVAAnalysis" # where NexgridAnalysis table will live
-    DATA_DIR = "data"
+    DATA_DIR = "nexgrid_hourly_reports_monthly"
     TABLE_NAME = "NexgridAnalysis"
-    KVA_COLUMN_NAME = "meter_id"
+    KVA_COLUMN_NAME = "hourly_avg_power"
 
     # build connections
     src_conn_str = build_conn_str(SERVER, SOURCE_DB)
@@ -205,19 +226,38 @@ if __name__ == "__main__":
 
     # fetch coords once from source DB
     with connect_pyodbc(src_conn_str) as src_conn:
-        coords = fetch_meter_shapes(src_conn, SOURCE_DB)
-        coords = add_latlon(coords)
+        coords_df = fetch_meter_shapes(src_conn, SOURCE_DB)
+        coords_df = add_latlon(coords_df)
+
+    if len(sys.argv) != 2:
+        raise SystemExit(
+            "Usage: python export_pipeline.py <csv-file-name-or-path>\n"
+            "Example: python export_pipeline.py monthly_report.csv"
+        )
+
+    # process given file
+    input_path = sys.argv[1]
+    if not input_path.lower().endswith(".csv"):
+        raise SystemExit("Error: input must be a .csv file")
+
+    if os.path.isabs(input_path):
+        path = input_path
+    else:
+        path = os.path.join(DATA_DIR, input_path)
+
+    if not os.path.exists(path):
+        raise SystemExit(
+            f"Error: file not found: {path}"
+            f"If the file is not in the folder {DATA_DIR}, use an absolute path or move it into {DATA_DIR}. Example: C:/Users/bknight/Downloads/file.csv"
+        )
 
     # ensure target table exists (create if needed)
-    # can keep ensure_table(TABLE_NAME) or call a pyodbc create DDL here
     with connect_pyodbc(tgt_conn_str) as tgt_conn:
-        ensure_table(tgt_conn, TABLE_NAME)           # <-- call once, before inserts
-        for fname in os.listdir(DATA_DIR):
-            if not fname.lower().endswith(".csv"):
-                continue
-            path = os.path.join(DATA_DIR, fname)
-            df = process_file(path, tgt_conn, coords_df=coords, database=SOURCE_DB)
-            if df.empty:
-                continue
+        ensure_table(tgt_conn, TABLE_NAME)  # <-- call once, before inserts
+        df = process_file(path, tgt_conn, coords_df=coords_df, database=SOURCE_DB)
+        if not df.empty:
+            df = df.drop_duplicates(subset=["meter_id", "timestamp"])
             insert_meter_rows(tgt_conn, df, TABLE_NAME)
-            print(f"[Done] {path} -> inserted {len(df)} rows")
+            print(f"[Done] {path} -> processed {len(df)} rows!")
+        else:
+            print("No reads were added. Check the report file and its contents.")
