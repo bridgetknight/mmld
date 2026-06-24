@@ -6,6 +6,7 @@ set SCRIPT_DIR=%~dp0
 set INCOMING_DIR=%SCRIPT_DIR%nexgrid_hourly_reports_monthly
 set ARCHIVE_DIR=%SCRIPT_DIR%archive
 
+if not exist "%INCOMING_DIR%" mkdir "%INCOMING_DIR%"
 if not exist "%ARCHIVE_DIR%" mkdir "%ARCHIVE_DIR%"
 
 rem Prefer a bundled export_pipeline.exe if present; otherwise use the Python launcher

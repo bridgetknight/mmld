@@ -29,11 +29,12 @@ jobs:
     
     - name: Prepare distribution folder
       run: |
-        mkdir -p dist_release
+        if not exist dist_release mkdir dist_release
+        if not exist dist_release\nexgrid_hourly_reports_monthly mkdir dist_release\nexgrid_hourly_reports_monthly
+        if not exist dist_release\archive mkdir dist_release\archive
         copy dist\export_pipeline.exe dist_release\
         copy run_export.bat dist_release\
         copy README.md dist_release\
-        copy requirements.txt dist_release\
     
     - name: Create ZIP archive
       run: |

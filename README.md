@@ -1,9 +1,9 @@
 # Nexgrid to SQL CSV Importer
 
 ## Overview
-This tool reads a monthly Nexgrid CSV and inserts rows into a SQL Server database. The CSV should be placed in the `nexgrid_hourly_reports_monthly` folder. Processed files are automatically moved to the `archive` folder. No Python installation needed if you use the bundled EXE.
+This tool reads a monthly Nexgrid CSV and inserts rows into a SQL Server database. The CSV should be placed in the `nexgrid_hourly_reports_monthly` folder which can be accessed after unzipping the release build `.zip` file. Processed files are automatically moved to the `archive` folder. No Python installation needed if you use the bundled EXE.
 
-## Quick Start (EXE / No Python Required)
+## Getting Started (EXE / No Python Required)
 
 Using the packaged release (`nexgrid_importer_*.zip`):
 
@@ -16,7 +16,7 @@ Using the packaged release (`nexgrid_importer_*.zip`):
 
 You can also double-click `export_pipeline.exe` directly (only if it's in the same folder as the CSV folder), but the batch wrapper is recommended for automatic archiving.
 
-## How It Works
+## Behind the Scenes
 
 The packaged EXE (`export_pipeline.exe`) contains:
 - Python 3 interpreter
@@ -25,7 +25,7 @@ The packaged EXE (`export_pipeline.exe`) contains:
 
 When you run the EXE or the batch file, it extracts and executes everything for you.
 
-## Setup (if you have Python installed)
+## Setup (if you want to use your local Python build)
 
 1. Open PowerShell in the folder
 2. Install dependencies:
@@ -60,16 +60,9 @@ run_export.bat
 | `Error: file not found` | Check CSV file name and location in `nexgrid_hourly_reports_monthly` |
 | `Error: input must be a .csv file` | Ensure the file has `.csv` extension |
 | Script processes nothing | Verify CSV columns: `meter_id`, `time`, `kwh usage` |
-| Antivirus blocks EXE | This is a false positive with PyInstaller builds. Add `export_pipeline.exe` to antivirus whitelist. |
+| Antivirus blocks EXE | This is a common false positive with PyInstaller builds. Add `export_pipeline.exe` to antivirus whitelist. |
 
-## Support
-
-If distributing to end users, they can:
-- Place CSVs in `nexgrid_hourly_reports_monthly` and double-click `run_export.bat`
-- Check processed files in `archive`
-- Contact you if there are SQL connection issues
-
-## To Do:
+## To Do
 - Add Mac support
 - Add toggle for other types of read periods (e.g., daily, weekly)
 - Pipe output to a real-time dashboard with geospatial analysis maps, graphs, etc.
