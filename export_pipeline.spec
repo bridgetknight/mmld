@@ -4,7 +4,7 @@
 block_cipher = None
 
 a = Analysis(
-    ['export_pipeline.py'],
+    ['src/export_pipeline.py'],
     pathex=[],
     binaries=[],
     datas=[],
