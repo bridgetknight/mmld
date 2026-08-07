@@ -1,8 +1,11 @@
 *.csv
-/archive
+archive/
 dist/
 build/
+build.txt
+dev/
 __pycache__/
 *.pyc
 build.txt
 .vscode/
+nexgrid_hourly_reports_monthly/

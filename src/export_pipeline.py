@@ -290,12 +290,71 @@ def insert_meter_rows(conn: pyodbc.Connection, df: pd.DataFrame, table: str):
         )
         conn.commit()
 
+def _find_csv_paths(inputs: list[str], data_dir: str) -> list[str]:
+    files: list[str] = []
+    seen: set[str] = set()
+
+    def add_csv_file(csv_path: str) -> None:
+        abs_path = os.path.abspath(csv_path)
+        if abs_path not in seen:
+            seen.add(abs_path)
+            files.append(abs_path)
+
+    def add_csvs_from_dir(directory: str) -> None:
+        if not os.path.isdir(directory):
+            raise SystemExit(f"Error: directory not found: {directory}")
+        for name in os.listdir(directory):
+            if name.lower().endswith(".csv"):
+                add_csv_file(os.path.join(directory, name))
+
+    if not inputs:
+        add_csvs_from_dir(data_dir)
+        return files
+
+    for input_path in inputs:
+        if input_path in (".", ""):
+            add_csvs_from_dir(data_dir)
+            continue
+
+        expanded = os.path.expanduser(input_path)
+        candidate = expanded if os.path.isabs(expanded) else os.path.abspath(expanded)
+
+        if os.path.exists(candidate):
+            if os.path.isdir(candidate):
+                add_csvs_from_dir(candidate)
+                continue
+            if candidate.lower().endswith(".csv"):
+                add_csv_file(candidate)
+                continue
+            raise SystemExit(
+                "Error: input must be a .csv file or a folder containing .csv files"
+            )
+
+        alt_candidate = os.path.join(data_dir, input_path)
+        if os.path.exists(alt_candidate):
+            if os.path.isdir(alt_candidate):
+                add_csvs_from_dir(alt_candidate)
+                continue
+            if alt_candidate.lower().endswith(".csv"):
+                add_csv_file(alt_candidate)
+                continue
+
+        raise SystemExit(
+            f"Error: path not found: {input_path}\n"
+            f"Use a full path, a file in {data_dir}, a folder containing .csv files, or no path to process all CSVs in {data_dir}."
+        )
+    print("Files to process: ")
+    print(files)
+    return files
+
+
 if __name__ == "__main__":
     # config
     SERVER = "MMLDAPP03"
-    SOURCE_DB = "MMLDGIS"           # where shapes/meternxt live
-    TARGET_DB = "GridAnalysis" # where NexgridAnalysis table will live
-    DATA_DIR = "nexgrid_hourly_reports_monthly"
+    SOURCE_DB = "MMLDGIS" 
+    TARGET_DB = "GridAnalysis"
+    ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_DIR = os.path.join(ROOT_DIR, "nexgrid_hourly_reports_monthly")
     TABLE_NAME = "MonthlyKVAReads"
     KVA_COLUMN_NAME = "hourly_avg_power"
 
@@ -307,43 +366,27 @@ if __name__ == "__main__":
     with connect_pyodbc(tgt_conn_str) as tgt_conn:
         coords_df = fetch_meter_coords(tgt_conn, TARGET_DB)
 
-    if len(sys.argv) != 2:
-        raise SystemExit(
-            "Usage: python export_pipeline.py <csv-file-name-or-path>\n"
-            "Example: python export_pipeline.py monthly_report.csv"
-        )
-
-    # process given file
-    input_path = sys.argv[1]
-    if not input_path.lower().endswith(".csv"):
-        raise SystemExit("Error: input must be a .csv file")
-
-    if os.path.isabs(input_path):
-        path = input_path
-    else:
-        path = os.path.join(DATA_DIR, input_path)
-
-    if not os.path.exists(path):
-        raise SystemExit(
-            f"Error: file not found: {path}"
-            f"If the file is not in the folder {DATA_DIR}, use an absolute path or move it into {DATA_DIR}. Example: C:/Users/YourUsername/Downloads/file.csv"
-        )
-    
-    for fname in os.listdir(DATA_DIR):
-        if fname.endswith('.csv'):
-            break
-    else:
+    csv_paths = _find_csv_paths(sys.argv[1:], DATA_DIR)
+    if not csv_paths:
         raise SystemExit(
             f"Error: No .csv files located in the input folder {DATA_DIR}."
         )
 
-    # ensure target table exists (create if needed)
     with connect_pyodbc(tgt_conn_str) as tgt_conn:
-        ensure_table(tgt_conn, TABLE_NAME)  # <-- call once, before inserts
-        df = process_file(path, tgt_conn, coords_df=coords_df)
-        if not df.empty:
-            df = df.drop_duplicates(subset=["meter_id", "timestamp"])
-            insert_meter_rows(tgt_conn, df, TABLE_NAME)
-            print(f"[Done] {path} -> processed {len(df)} rows!")
-        else:
-            print("No reads were added. Check the report file and its contents.")
+        ensure_table(tgt_conn, TABLE_NAME)
+        for path in csv_paths:
+            print(f"Processing {path}...")
+
+            try:
+                df = process_file(path, tgt_conn, coords_df = coords_df)
+            except Exception as e:
+                print(f"An error occured processing file {path}.\n{e}")
+
+            df = process_file(path, tgt_conn, coords_df=coords_df)
+            if not df.empty:
+                df = df.drop_duplicates(subset=["meter_id", "timestamp"])
+                insert_meter_rows(tgt_conn, df, TABLE_NAME)
+                print(f"[Done] {path} -> processed {len(df)} rows!")
+            else:
+                print(f"No reads were added from {path}. Check the report file and its contents.")
+

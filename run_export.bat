@@ -10,28 +10,7 @@ if not exist "%INCOMING_DIR%" mkdir "%INCOMING_DIR%"
 if not exist "%ARCHIVE_DIR%" mkdir "%ARCHIVE_DIR%"
 
 rem Prefer a bundled export_pipeline.exe if present; otherwise use the Python launcher
-rem If a single-file EXE is included, it will be called directly. Otherwise the script uses the first available Python command.
-
-set PYTHON_CMD=
-where py >nul 2>&1
-if not errorlevel 1 (
-    set PYTHON_CMD=py -3
-) else (
-    where python >nul 2>&1
-    if not errorlevel 1 (
-        set PYTHON_CMD=python
-    ) else (
-        where python3 >nul 2>&1
-        if not errorlevel 1 (
-            set PYTHON_CMD=python3
-        )
-    )
-)
-
-if "%PYTHON_CMD%"=="" (
-    echo Error: No Python launcher found. Install Python or add python to PATH.
-    goto end
-)
+rem If a single-file EXE is included, it will be called directly. Otherwise the script uses `py -3`.
 
 if "%~1"=="" (
     set PROCESS_ALL=1
@@ -49,7 +28,7 @@ if "%PROCESS_ALL%"=="1" (
         if exist "%SCRIPT_DIR%export_pipeline.exe" (
             "%SCRIPT_DIR%export_pipeline.exe" "%%~fF"
         ) else (
-            call %PYTHON_CMD% "%SCRIPT_DIR%export_pipeline.py" "%%~fF"
+            py -3 "%SCRIPT_DIR%export_pipeline.py" "%%~fF"
         )
         if errorlevel 1 (
             echo ERROR: processing %%~nxF
@@ -71,7 +50,7 @@ for %%A in (%*) do (
             if exist "%SCRIPT_DIR%export_pipeline.exe" (
                 "%SCRIPT_DIR%export_pipeline.exe" "%%~fF"
             ) else (
-                call %PYTHON_CMD% "%SCRIPT_DIR%export_pipeline.py" "%%~fF"
+                py -3 "%SCRIPT_DIR%export_pipeline.py" "%%~fF"
             )
             if errorlevel 1 (
                 echo ERROR: processing %%~nxF
@@ -112,7 +91,7 @@ for %%A in (%*) do (
             if exist "%SCRIPT_DIR%export_pipeline.exe" (
                 "%SCRIPT_DIR%export_pipeline.exe" "!CSV_PATH!"
             ) else (
-                call %PYTHON_CMD% "%SCRIPT_DIR%export_pipeline.py" "!CSV_PATH!"
+                py -3 "%SCRIPT_DIR%export_pipeline.py" "!CSV_PATH!"
             )
             if errorlevel 1 (
                 echo ERROR: processing !CSV_PATH!
