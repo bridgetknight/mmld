@@ -9,3 +9,4 @@ __pycache__/
 build.txt
 .vscode/
 nexgrid_hourly_reports_monthly/
+data/

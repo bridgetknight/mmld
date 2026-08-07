@@ -3,11 +3,26 @@ setlocal enabledelayedexpansion
 
 rem Base directories
 set SCRIPT_DIR=%~dp0
-set INCOMING_DIR=%SCRIPT_DIR%nexgrid_hourly_reports_monthly
+set INCOMING_DIR=%SCRIPT_DIR%incoming
 set ARCHIVE_DIR=%SCRIPT_DIR%archive
+set BUNDLE_EXE=%SCRIPT_DIR%export_pipeline.exe
+set PYTHON_SCRIPT=
 
-if not exist "%INCOMING_DIR%" mkdir "%INCOMING_DIR%"
+if not exist "%INCOMING_DIR%" (
+    if exist "%SCRIPT_DIR%nexgrid_reports" (
+        set "INCOMING_DIR=%SCRIPT_DIR%nexgrid_reports"
+    ) else (
+        mkdir "%INCOMING_DIR%"
+    )
+)
 if not exist "%ARCHIVE_DIR%" mkdir "%ARCHIVE_DIR%"
+
+if not exist "%BUNDLE_EXE%" set "BUNDLE_EXE=%SCRIPT_DIR%..\dist\export_pipeline.exe"
+if exist "%SCRIPT_DIR%src\export_pipeline.py" (
+    set "PYTHON_SCRIPT=%SCRIPT_DIR%src\export_pipeline.py"
+) else if exist "%SCRIPT_DIR%..\src\export_pipeline.py" (
+    set "PYTHON_SCRIPT=%SCRIPT_DIR%..\src\export_pipeline.py"
+)
 
 rem Prefer a bundled export_pipeline.exe if present; otherwise use the Python launcher
 rem If a single-file EXE is included, it will be called directly. Otherwise the script uses the first available Python command.
@@ -46,8 +61,10 @@ if "%PROCESS_ALL%"=="1" (
     for %%F in ("%INCOMING_DIR%\*.csv") do (
         echo.
         echo Processing %%~nxF...
-        if exist "%SCRIPT_DIR%export_pipeline.exe" (
-            "%SCRIPT_DIR%export_pipeline.exe" "%%~fF"
+        if exist "%BUNDLE_EXE%" (
+            "%BUNDLE_EXE%" "%%~fF"
+        ) else if defined PYTHON_SCRIPT (
+            py -3 "%PYTHON_SCRIPT%" "%%~fF"
         ) else (
             call %PYTHON_CMD% "%SCRIPT_DIR%export_pipeline.py" "%%~fF"
         )
