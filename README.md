@@ -1,4 +1,5 @@
 # Nexgrid to SQL CSV Importer
+![Static Badge](https://img.shields.io/badge/version-1.1-blue)
 
 ## Overview
 This tool reads a monthly Nexgrid CSV and inserts rows into a SQL Server database. The CSV should be placed in the `incoming` folder which can be accessed after unzipping the release build `.zip` file. Processed files are automatically moved to the `archive` folder. No Python installation needed if you use the bundled EXE.
