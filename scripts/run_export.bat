@@ -5,7 +5,7 @@ rem Base directories
 set SCRIPT_DIR=%~dp0
 set INCOMING_DIR=%SCRIPT_DIR%incoming
 set ARCHIVE_DIR=%SCRIPT_DIR%archive
-set BUNDLE_EXE=%SCRIPT_DIR%export_pipeline.exe
+set BUNDLE_EXE=
 set PYTHON_SCRIPT=
 
 if not exist "%INCOMING_DIR%" (
@@ -17,7 +17,11 @@ if not exist "%INCOMING_DIR%" (
 )
 if not exist "%ARCHIVE_DIR%" mkdir "%ARCHIVE_DIR%"
 
-if not exist "%BUNDLE_EXE%" set "BUNDLE_EXE=%SCRIPT_DIR%..\dist\export_pipeline.exe"
+if exist "%SCRIPT_DIR%export_pipeline.exe" (
+    set "BUNDLE_EXE=%SCRIPT_DIR%export_pipeline.exe"
+) else if exist "%SCRIPT_DIR%..\dist\export_pipeline\export_pipeline.exe" (
+    set "BUNDLE_EXE=%SCRIPT_DIR%..\dist\export_pipeline\export_pipeline.exe"
+)
 if exist "%SCRIPT_DIR%src\export_pipeline.py" (
     set "PYTHON_SCRIPT=%SCRIPT_DIR%src\export_pipeline.py"
 ) else if exist "%SCRIPT_DIR%..\src\export_pipeline.py" (
@@ -85,8 +89,10 @@ for %%A in (%*) do (
         for %%F in ("%INCOMING_DIR%\*.csv") do (
             echo.
             echo Processing %%~nxF...
-            if exist "%SCRIPT_DIR%export_pipeline.exe" (
-                "%SCRIPT_DIR%export_pipeline.exe" "%%~fF"
+            if defined BUNDLE_EXE (
+                "%BUNDLE_EXE%" "%%~fF"
+            ) else if defined PYTHON_SCRIPT (
+                call %PYTHON_CMD% "%PYTHON_SCRIPT%" "%%~fF"
             ) else (
                 call %PYTHON_CMD% "%SCRIPT_DIR%export_pipeline.py" "%%~fF"
             )
@@ -112,10 +118,12 @@ for %%A in (%*) do (
             for %%F in ("!CSV_PATH!\*.csv") do (
                 echo.
                 echo Processing %%~nxF...
-                if exist "%SCRIPT_DIR%export_pipeline.exe" (
-                    "%SCRIPT_DIR%export_pipeline.exe" "%%~fF"
+                if defined BUNDLE_EXE (
+                    "%BUNDLE_EXE%" "%%~fF"
+                ) else if defined PYTHON_SCRIPT (
+                    call %PYTHON_CMD% "%PYTHON_SCRIPT%" "%%~fF"
                 ) else (
-                    py -3 "%SCRIPT_DIR%export_pipeline.py" "%%~fF"
+                    call %PYTHON_CMD% "%SCRIPT_DIR%export_pipeline.py" "%%~fF"
                 )
                 if errorlevel 1 (
                     echo ERROR: processing %%~nxF
@@ -126,8 +134,10 @@ for %%A in (%*) do (
             )
         ) else if /I "!CSV_PATH:~-4!"==".csv" (
             echo Processing !CSV_PATH!...
-            if exist "%SCRIPT_DIR%export_pipeline.exe" (
-                "%SCRIPT_DIR%export_pipeline.exe" "!CSV_PATH!"
+            if defined BUNDLE_EXE (
+                "%BUNDLE_EXE%" "!CSV_PATH!"
+            ) else if defined PYTHON_SCRIPT (
+                call %PYTHON_CMD% "%PYTHON_SCRIPT%" "!CSV_PATH!"
             ) else (
                 call %PYTHON_CMD% "%SCRIPT_DIR%export_pipeline.py" "!CSV_PATH!"
             )

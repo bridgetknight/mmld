@@ -1,7 +1,7 @@
 # Nexgrid to SQL CSV Importer
 
 ## Overview
-This tool reads a monthly Nexgrid CSV and inserts rows into a SQL Server database. The CSV should be placed in the `nexgrid_hourly_reports_monthly` folder which can be accessed after unzipping the release build `.zip` file. Processed files are automatically moved to the `archive` folder. No Python installation needed if you use the bundled EXE.
+This tool reads a monthly Nexgrid CSV and inserts rows into a SQL Server database. The CSV should be placed in the `incoming` folder which can be accessed after unzipping the release build `.zip` file. Processed files are automatically moved to the `archive` folder. No Python installation needed if you use the bundled EXE.
 
 ## Getting Started
 
@@ -12,18 +12,19 @@ Using the packaged release (`nexgrid_importer_*.zip`):
 3. It will be processed on a regular basis, or you can double-click `run_export.bat` for instant processing
 4. The script processes the CSV and moves it to `archive`
 
-## Alternative: Direct EXE Usage
+## Alternative: Bundled Usage
 
-You can also double-click `export_pipeline.exe` directly, but the batch wrapper (`run_export.bat`) is recommended for automatic archiving.
+You can use the bundled `dist\export_pipeline\export_pipeline.exe` or simply run the batch wrapper (`run_export.bat`) for automatic archiving.
 
 ## Behind the Scenes
 
-The packaged EXE (`export_pipeline.exe`) contains:
-- Python 3 interpreter
+The packaged onedir bundle contains:
+- `export_pipeline.exe`
+- Python runtime files
 - All required packages (pandas, pyodbc, shapely, etc.)
 - CSV import script
 
-When you run the EXE or the batch file, it extracts and executes everything for you.
+When you run the executable or the batch file, the application loads from the bundle directory and executes without needing a system Python install.
 
 ## Requirements
 

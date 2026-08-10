@@ -4,7 +4,6 @@ import pyodbc
 from pyproj import Transformer
 from shapely import wkb
 import sys
-from tqdm import tqdm
 
 import warnings
 warnings.filterwarnings('ignore', category=UserWarning)   
@@ -16,6 +15,16 @@ PEAK_KW_COLUMN_NAME = "peak_kw"
 KWH_COLUMN_NAME = "total_kwh"
 LATITUDE_COLUMN = "latitude"
 LONGITUDE_COLUMN = "longitude"
+
+
+def _print_progress(current: int, total: int, prefix: str = "Progress", length: int = 40) -> None:
+    if total <= 0:
+        return
+    percent = current / total
+    filled_len = int(length * current // total)
+    bar = "#" * filled_len + "-" * (length - filled_len)
+    end_char = "\n" if current >= total else "\r"
+    print(f"  {prefix} |{bar}| {current}/{total}", end=end_char, flush=True)
 
 
 def build_conn_str(server, database):
@@ -216,7 +225,10 @@ def process_file(
 
     # Read the CSV, normalize it, and add it to a temporary collection of chunks
     parts = []
+    chunk_index = 0
     for chunk in pd.read_csv(filepath, chunksize=chunk_size, dtype=str):
+        chunk_index += 1
+        print(f"  reading chunk {chunk_index} from {os.path.basename(filepath)}...", flush=True)
         part = normalize_meter_data(chunk)
         if not part.empty:
             parts.append(part)
@@ -267,7 +279,7 @@ def insert_meter_rows(conn: pyodbc.Connection, df: pd.DataFrame, table: str):
         cols_to_extract.extend([LATITUDE_COLUMN, LONGITUDE_COLUMN])
 
     subset = df[cols_to_extract]
-    for _, r in tqdm(subset.iterrows(), desc=f"Normalizing rows", bar_format="{l_bar}{bar:10}{r_bar}", total=len(subset)):
+    for _, r in subset.iterrows():
         # Normalize the meter ID to a plain integer or null.
         mid = r[METER_ID_COLUMN]
         if pd.isna(mid):
@@ -318,7 +330,10 @@ def insert_meter_rows(conn: pyodbc.Connection, df: pd.DataFrame, table: str):
         rows.append(tuple(row_values))
 
     if rows:
-        for row in tqdm(rows, bar_format="{l_bar}{bar:10}{r_bar}", total=len(rows)):
+        total_rows = len(rows)
+        print(f"  inserting {total_rows} rows into {table}...")
+        report_every = max(1, total_rows // 40)
+        for row_index, row in enumerate(rows, start=1):
             params = list(row)
             cur.execute(
                 f"""
@@ -348,7 +363,10 @@ def insert_meter_rows(conn: pyodbc.Connection, df: pd.DataFrame, table: str):
                 """,
                 params,
             )
+            if row_index % report_every == 0 or row_index == total_rows:
+                _print_progress(row_index, total_rows, prefix=f"insert into {table}")
         conn.commit()
+        print(f"  inserted {total_rows}/{total_rows} rows into {table}.")
 
 def _find_csv_paths(inputs: list[str], data_dir: str) -> list[str]:
     files: list[str] = []
@@ -414,7 +432,7 @@ if __name__ == "__main__":
     SOURCE_DB = "MMLDGIS" 
     TARGET_DB = "GridAnalysis"
     ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-    DATA_DIR = os.path.join(ROOT_DIR, "nexgrid_hourly_reports_monthly")
+    DATA_DIR = os.path.join(ROOT_DIR, "incoming")
     TABLE_NAME = "MonthlyKVAReads"
 
     # build connection
@@ -422,6 +440,7 @@ if __name__ == "__main__":
 
     # fetch coords once from Meters reference table in target DB
     with connect_pyodbc(tgt_conn_str) as tgt_conn:
+        print(f"Successfully connected to SQL server: {SERVER}")
         coords_df = fetch_meter_coords(tgt_conn, TARGET_DB)
 
     csv_paths = _find_csv_paths(sys.argv[1:], DATA_DIR)
@@ -432,19 +451,21 @@ if __name__ == "__main__":
 
     with connect_pyodbc(tgt_conn_str) as tgt_conn:
         ensure_table(tgt_conn, TABLE_NAME)
-        for path in csv_paths:
-            print(f"Processing {path}...")
+        for path_index, path in enumerate(csv_paths, start=1):
+            print(f"Processing file {path_index}/{len(csv_paths)}: {path}")
 
             try:
-                df = process_file(path, tgt_conn, coords_df = coords_df)
+                df = process_file(path, tgt_conn, coords_df=coords_df)
             except Exception as e:
                 print(f"An error occured processing file {path}.\n{e}")
+                continue
 
-            df = process_file(path, tgt_conn, coords_df=coords_df)
             if not df.empty:
-                df = df.drop_duplicates(subset=["meter_id", "timestamp"])
+                print(f"  normalized rows: {len(df)}")
+                df = df.drop_duplicates(subset=[METER_ID_COLUMN, TIMESTAMP_COLUMN])
+                print(f"  rows after duplicate removal: {len(df)}")
                 insert_meter_rows(tgt_conn, df, TABLE_NAME)
-                print(f"[Done] {path} -> processed {len(df)} rows!")
+                print(f"[Done] {path} -> processed {len(df)} rows!\n")
             else:
-                print(f"No reads were added from {path}. Check the report file and its contents.")
+                print(f"No reads were added from {path}. Check the report file and its contents.\n")
 
