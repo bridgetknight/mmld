@@ -421,8 +421,7 @@ def _find_csv_paths(inputs: list[str], data_dir: str) -> list[str]:
             f"Error: path not found: {input_path}\n"
             f"Use a full path, a file in {data_dir}, a folder containing .csv files, or no path to process all CSVs in {data_dir}."
         )
-    print("Files to process: ")
-    print(files)
+
     return files
 
 
