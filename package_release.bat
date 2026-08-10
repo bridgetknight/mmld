@@ -3,10 +3,11 @@ setlocal enabledelayedexpansion
 
 rem Release packaging script for end users.
 cd /d "%~dp0"
+set VER=1.1
 
 set RELEASE_DIR=%~dp0dist_release
 set BUNDLE_DIR=%~dp0dist\export_pipeline
-set OUT_ZIP=%~dp0nexgrid_importer_release.zip
+set OUT_ZIP=%~dp0nexgrid_importer_release_%VER%.zip
 
 if not exist "%BUNDLE_DIR%\export_pipeline.exe" (
   echo ERROR: build output not found in dist\export_pipeline.

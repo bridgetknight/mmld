@@ -5,4 +5,4 @@ py -3 -m venv .venv
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 pip install pyinstaller
-pyinstaller --clean --onedir --noupx --exclude-module matplotlib --exclude-module seaborn --exclude-module sklearn --name export_pipeline src\export_pipeline.py
+pyinstaller --clean --onedir --noupx --exclude-module matplotlib --exclude-module seaborn --exclude-module sklearn --noconfirm --name export_pipeline src\export_pipeline.py

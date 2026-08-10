@@ -30,7 +30,7 @@ When you run the executable or the batch file, the application loads from the bu
 
 - **Recipient machine**: Windows only (exe includes Python; no install needed)
 - **SQL Server**: Approved Windows user account with access to target database
-- **Python** (only if building the EXE yourself or running the script directly): Python 3.8+
+- **Python** (_only if building the EXE yourself or running the script directly_): Python 3.8+
 
 ## Troubleshooting
 
@@ -40,6 +40,10 @@ When you run the executable or the batch file, the application loads from the bu
 | `Error: input must be a .csv file` | Ensure the file has `.csv` extension |
 | Script processes nothing | Verify CSV columns: `meter_id`, `time`, `kwh usage` |
 | Antivirus blocks EXE | This is a common false positive with PyInstaller builds. Add `export_pipeline.exe` to antivirus whitelist. |
+
+## Development
+
+If you fork this code and update it, run `build.bat` followed by `package_release.bat` to generate the `nexgrid_importer.zip` file with all necessary release files.
 
 ## To Do
 - Add Mac support
