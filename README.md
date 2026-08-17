@@ -1,3 +1,26 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**
+
+- [Nexgrid to SQL CSV Importer](#nexgrid-to-sql-csv-importer)
+  - [Overview](#overview)
+  - [Getting Started](#getting-started)
+  - [Alternative: Bundled Usage](#alternative-bundled-usage)
+  - [Behind the Scenes](#behind-the-scenes)
+  - [Requirements](#requirements)
+  - [Troubleshooting](#troubleshooting)
+  - [Development](#development)
+  - [To Do](#to-do)
+- [Transformer Risk Dashboard](#transformer-risk-dashboard)
+  - [Overview](#overview-1)
+  - [Pre-requisites](#pre-requisites)
+  - [How to Launch the Dashboard](#how-to-launch-the-dashboard)
+  - [Using the Dashboard](#using-the-dashboard)
+  - [Important Notes](#important-notes)
+  - [To Do](#to-do-1)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Nexgrid to SQL CSV Importer
 ![Static Badge](https://img.shields.io/badge/version-1.1-blue)
 
