@@ -1,3 +1,5 @@
+<img src="https://github.com/bridgetknight/mmld/blob/main/MMLD-LOGO-RGB-Master_052015.png" width="200">
+
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 **Table of Contents**
