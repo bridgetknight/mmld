@@ -4,6 +4,7 @@ dist/
 build/
 build.txt
 dev/
+transformer_analysis_dashboard/.cache*
 __pycache__/
 *.pyc
 build.txt
@@ -11,3 +12,4 @@ build.txt
 incoming/
 data/
 dist_release/
+
